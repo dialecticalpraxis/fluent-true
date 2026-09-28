@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fluent &ne; True: Type 1 Moments</title>
+<style>
+  :root { --purple:#512888; --gold:#F4C55C; --cream:#FFF1C9; --lav:#F1ECF8; --muted:#595959; --line:#D1D1D1; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: #000;
+    font-family: "Lato Extended", Lato, "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 16px; line-height: 1.5; }
+  .box { border-left: 6px solid var(--gold); background: var(--cream); padding: 14px 18px; border-radius: 0 4px 4px 0; }
+  .box.summary { border-left-color: var(--purple); background: var(--lav); }
+  p { margin: 0 0 10px 0; }
+  .opts { display: flex; flex-direction: column; gap: 6px; }
+  .opts.scale { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; text-align: left; background: #fff; color: #000; border: 1px solid var(--line);
+    border-radius: 4px; padding: 7px 12px; cursor: pointer; }
+  .scale button { text-align: center; min-width: 44px; }
+  button:hover { border-color: var(--purple); }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--purple); color: #fff; border-color: var(--purple); }
+  .scale-ends { font-size: 14px; color: var(--muted); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  input[type="text"] { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; width: 14em; max-width: 100%; }
+  .status { margin: 8px 0 0 0; font-size: 14px; color: var(--muted); min-height: 1.5em; }
+  h2 { color: var(--purple); font-size: 19px; margin: 0 0 8px 0; }
+  h3 { font-size: 16px; margin: 16px 0 6px 0; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; background: #fff; }
+  th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+  th { color: var(--purple); }
+  .match { font-weight: bold; color: var(--purple); }
+  .miss { font-weight: bold; color: #9f694f; }
+  .actions { margin-top: 14px; }
+  .note { font-size: 14px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<script>
+(function () {
+  var KEY = "fluent-true-group3:v1";
+
+  var Q = {
+    "trust-start": { kind: "scale", label: "\u26A1 Type 1 Moment",
+      prompt: "Before you begin: on a scale of 1 (not at all) to 5 (completely), how much do you trust an answer from an AI chatbot?",
+      after: "Saved. We will ask again at the end of the page." },
+    "next-word": { kind: "text", label: "\u26A1 Type 1 Moment",
+      prompt: "Finish this sentence with the first word that comes to mind: \u201CThe adult educator designed an active learning ___\u201D",
+      after: "Saved. Now open the check below." },
+    "study-approach": { kind: "choice", label: "\u26A1 Type 1 Moment", scored: true, answer: "B",
+      prompt: "You are studying for an exam with an AI tool. Which approach helps you learn more?",
+      options: { A: "Ask the AI for the answer, then read it carefully", B: "Write your own answer first, then compare it with the AI\u2019s" },
+      short: "Studying with an AI tool",
+      finding: "B. Committing to your own answer first keeps the reasoning with you (Bu\u00E7inca et al., 2021)." },
+    "work-answer": { kind: "choice", label: "\u26A1 Type 1 Moment", scored: false,
+      prompt: "An AI tool gives you a polished, confident answer to a question at work. What do you most likely do?",
+      options: { A: "Use it as is", B: "Skim it, then use it", C: "Check it against another source first" },
+      short: "A polished AI answer at work",
+      finding: "Not scored. Most people say C. In practice they tend to do A or B unless something prompts a check." },
+    "exam-ai": { kind: "choice", label: "\u26A1 Type 1 Moment", scored: true, answer: "C",
+      prompt: "Nearly 1,000 students practiced math with an AI that gave full answers. On the final exam without AI, how did they do compared with students who never used it?",
+      options: { A: "Better", B: "About the same", C: "Worse" },
+      short: "Exam after practicing with an answer-giving chatbot",
+      finding: "Worse: 17 percent lower than students with no AI (Bastani et al., 2025)." },
+    "case1": { kind: "choice", label: "\u26A1 Predict", scored: true, answer: "B",
+      prompt: "When the AI assistant went offline, what happened to the new agents\u2019 performance?",
+      options: { A: "It dropped back to where it started", B: "Some of the gains remained", C: "It fell below agents who never used AI" },
+      short: "Case 1: New agents when the AI went offline",
+      finding: "Some of the gains remained (Brynjolfsson et al., 2025)." },
+    "case2": { kind: "choice", label: "\u26A1 Predict", scored: true, answer: "C",
+      prompt: "Students practiced math with an AI that gave full answers. On the exam without AI, how did they score compared with students who had no AI?",
+      options: { A: "Higher", B: "About the same", C: "Lower" },
+      short: "Case 2: Exam after an answer-giving chatbot",
+      finding: "Lower (Bastani et al., 2025)." },
+    "case3": { kind: "choice", label: "\u26A1 Predict", scored: true, answer: "C",
+      prompt: "An AI tutor that asked students to explain their thinking was compared with in-class active learning. What happened?",
+      options: { A: "Less learning", B: "About the same learning", C: "More than double the learning gain" },
+      short: "Case 3: AI tutor vs. in-class active learning",
+      finding: "More than double the learning gain, in less time (Kestin et al., 2025)." },
+    "case4": { kind: "choice", label: "\u26A1 Predict", scored: true, answer: "C",
+      prompt: "Consultants used GPT-4 on a task just outside what the model could handle. Compared with consultants without AI, they were:",
+      options: { A: "More likely to be correct", B: "Just as likely", C: "Less likely to be correct" },
+      short: "Case 4: Consultants on a task outside the model\u2019s frontier",
+      finding: "Less likely to be correct (Dell\u2019Acqua et al., 2026)." },
+    "trust-end": { kind: "scale", label: "\u26A1 Type 1 Moment",
+      prompt: "Rate again: on a scale of 1 to 5, how much do you trust an answer from an AI chatbot now?",
+      after: "Saved. Your results are in the box below." }
+  };
+  var ORDER = ["study-approach", "work-answer", "exam-ai", "case1", "case2", "case3", "case4"];
+
+  var storageOK = true;
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; }
+    catch (e) { storageOK = false; return {}; }
+  }
+  var memory = {};
+  function save(id, value) {
+    var data = load();
+    data[id] = value;
+    memory[id] = value;
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch (e) { storageOK = false; }
+  }
+  function get(id) { var d = load(); return (id in d) ? d[id] : memory[id]; }
+
+  function el(tag, attrs, text) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  var app = document.getElementById("app");
+  var params = new URLSearchParams(location.search);
+  var qid = params.get("q");
+  var view = params.get("view");
+
+  function renderQuestion(id) {
+    var q = Q[id];
+    app.innerHTML = "";
+    if (!q) { app.appendChild(el("p", null, "Unknown question id: " + id)); return; }
+    var box = el("div", { "class": "box" });
+    box.appendChild(el("p", { "class": "label", id: "lbl" }, q.label));
+    box.appendChild(el("p", { "class": "prompt", id: "prm" }, q.prompt));
+    var current = get(id);
+    var status = el("p", { "class": "status", role: "status" });
+
+    if (q.kind === "text") {
+      var row = el("div", { "class": "row" });
+      var input = el("input", { type: "text", "aria-labelledby": "prm", maxlength: "40" });
+      if (current) input.value = current;
+      var btn = el("button", { type: "button" }, "Save my word");
+      btn.addEventListener("click", function () {
+        var v = input.value.trim();
+        if (!v) { status.textContent = "Type a word first."; return; }
+        save(id, v); status.textContent = q.after;
+      });
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") btn.click(); });
+      row.appendChild(input); row.appendChild(btn); box.appendChild(row);
+      if (current) status.textContent = "Saved: \u201C" + current + "\u201D";
+    } else {
+      var group = el("div", { "class": "opts" + (q.kind === "scale" ? " scale" : ""), role: "group", "aria-labelledby": "prm" });
+      var keys = q.kind === "scale" ? ["1", "2", "3", "4", "5"] : Object.keys(q.options);
+      if (q.kind === "scale") group.appendChild(el("span", { "class": "scale-ends", "aria-hidden": "true" }, "Not at all"));
+      keys.forEach(function (k) {
+        var text = q.kind === "scale" ? k : k + ". " + q.options[k];
+        var b = el("button", { type: "button", "aria-pressed": String(String(current) === k) }, text);
+        b.addEventListener("click", function () {
+          save(id, k);
+          Array.prototype.forEach.call(group.querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", "false"); });
+          b.setAttribute("aria-pressed", "true");
+          status.textContent = q.after || "Saved. Now open the check below.";
+          if (!storageOK) status.textContent += " (Your browser is blocking saved answers, so the summary at the end will be empty.)";
+        });
+        group.appendChild(b);
+      });
+      if (q.kind === "scale") group.appendChild(el("span", { "class": "scale-ends", "aria-hidden": "true" }, "Completely"));
+      box.appendChild(group);
+      if (current != null) status.textContent = "Your answer is saved. You can change it.";
+    }
+    box.appendChild(status);
+    app.appendChild(box);
+  }
+
+  function renderSummary() {
+    app.innerHTML = "";
+    var d = load();
+    var box = el("div", { "class": "box summary" });
+    box.appendChild(el("h2", null, "Your Type 1 Moments, checked"));
+
+    var answered = Object.keys(d).filter(function (k) { return Q[k]; });
+    if (!answered.length) {
+      box.appendChild(el("p", null, storageOK
+        ? "No answers saved yet. Make your guesses in the Type 1 Moment boxes on this page, and your results will appear here."
+        : "Your browser is blocking the storage this summary needs, so your answers could not be collected. Your guesses still worked on each box."));
+    } else {
+      var s = d["trust-start"], e = d["trust-end"];
+      box.appendChild(el("h3", null, "Trust in AI chatbot answers"));
+      if (s && e) {
+        var diff = Number(e) - Number(s);
+        var line = "You started at " + s + " and ended at " + e + ". ";
+        line += diff < 0 ? "Your trust went down." : diff > 0 ? "Your trust went up." : "Your rating did not change.";
+        box.appendChild(el("p", null, line));
+        box.appendChild(el("p", null, "The page does not argue for a particular number. It argues for checking. A useful rating depends on the task, and on whether you have a way to tell when a specific answer is wrong."));
+      } else {
+        box.appendChild(el("p", null, s ? "You started at " + s + ". Rate again in the box above to compare." : "Rate your trust at the top of the page and again at the end to compare."));
+      }
+
+      var scored = ORDER.filter(function (k) { return Q[k].scored && d[k]; });
+      var hits = scored.filter(function (k) { return d[k] === Q[k].answer; }).length;
+      box.appendChild(el("h3", null, "Your predictions"));
+      box.appendChild(el("p", null, "Your guesses matched the research on " + hits + " of " + scored.length + " scored questions" + (scored.length < 6 ? " (6 in total; some are still blank)." : ".")));
+
+      var wrap = el("div", { "class": "table-wrap" });
+      var t = el("table");
+      var head = el("tr");
+      ["Question", "Your guess", "What the research found"].forEach(function (h) { head.appendChild(el("th", { scope: "col" }, h)); });
+      t.appendChild(head);
+      if (d["next-word"]) {
+        var r0 = el("tr");
+        r0.appendChild(el("td", null, "Finish the sentence"));
+        r0.appendChild(el("td", null, "\u201C" + d["next-word"] + "\u201D"));
+        r0.appendChild(el("td", null, "Not scored. You predicted a likely next word, which is the same operation an LLM performs."));
+        t.appendChild(r0);
+      }
+      ORDER.forEach(function (k) {
+        var q = Q[k], a = d[k], r = el("tr");
+        r.appendChild(el("td", null, q.short));
+        var cell = el("td");
+        if (a) {
+          cell.appendChild(document.createTextNode(a + ". " + q.options[a] + " "));
+          if (q.scored) cell.appendChild(el("span", { "class": a === q.answer ? "match" : "miss" }, a === q.answer ? "(matched)" : "(did not match)"));
+        } else cell.textContent = "No answer";
+        r.appendChild(cell);
+        r.appendChild(el("td", null, q.finding));
+        t.appendChild(r);
+      });
+      wrap.appendChild(t); box.appendChild(wrap);
+
+      box.appendChild(el("p", { style: "margin-top:12px" }, "Each guess that missed is a small version of this page\u2019s argument. The first answer came quickly and felt right, and only the check showed otherwise. Fluent AI output calls for the same check."));
+    }
+
+    var actions = el("div", { "class": "row actions" });
+    var refresh = el("button", { type: "button" }, "Update my results");
+    refresh.addEventListener("click", renderSummary);
+    var clear = el("button", { type: "button" }, "Clear my answers");
+    clear.addEventListener("click", function () {
+      try { localStorage.removeItem(KEY); } catch (err) {}
+      memory = {}; renderSummary();
+    });
+    actions.appendChild(refresh); actions.appendChild(clear);
+    box.appendChild(actions);
+    box.appendChild(el("p", { "class": "note" }, "Your answers are stored only in this browser. No one in the group or the course can see them."));
+    app.appendChild(box);
+  }
+
+  function render() {
+    if (view === "summary") renderSummary();
+    else if (qid) renderQuestion(qid);
+    else app.appendChild(el("p", null, "Add ?q=<question id> or ?view=summary to the URL."));
+  }
+  window.addEventListener("storage", function (ev) { if (ev.key === KEY || ev.key === null) render(); });
+  render();
+})();
+</script>
+</body>
+</html>
